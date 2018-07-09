@@ -20,14 +20,13 @@ class CrowdIndividual(object):
         self._min_column = 0
         self._max_column = 0
 
-        self._kernel = {}
-        self._taken_positions = {}
+        self.shape_available_pieces = {}
 
-        # Priority queue
-        self._candidate_pieces = []
-
-        root_piece = self.pieces[int(np.random.uniform(0, self._pieces_length))]
-        self.put_piece_to_kernel(root_piece, (0, 0))
+        for _ in range(100):
+            self._kernel = {}
+            self._taken_positions = {}
+            root_piece = self.pieces[int(np.random.uniform(0, self._pieces_length))]
+            self.put_piece_to_kernel(root_piece, (0, 0))
 
         # priority pool for fitness-based random selection
         # needed??
@@ -45,17 +44,27 @@ class CrowdIndividual(object):
         self._kernel[piece_id] = position
         self._taken_positions[position] = piece_id
 
+        if len(self._kernel) == self.rows * self.columns:
+            self.printIndividual()
+            return True
+
         available_boundaries = self._available_boundaries(position)
-        for orientation, position in available_boundaries:
-            probability_map = self.find_candidate_pieces_probability_map(piece_id, orientation, position)
+        for orientation, near_position in available_boundaries:
+            probability_map = self.find_candidate_pieces_probability_map(piece_id, orientation, near_position)
             if not probability_map:
                 continue
             # shape: jagged
-            candidate_pieces = [i[0] for i in sorted(probability_map.items(), key=lambda a:a[1], reverse=True)]
+            candidate_pieces = np.random.choice(list(probability_map.keys()), size=len(probability_map), replace=False, p=list(probability_map.values()))
+            #candidate_pieces = [i[0] for i in sorted(probability_map.items(), key=lambda a:a[1], reverse=True)]
             for candidate_piece in candidate_pieces:
-                if self._is_valid_piece(candidate_piece) and self.check_shape_valid(candidate_piece, position):
-                    self.put_piece_to_kernel(candidate_piece, position)
+                if self._is_valid_piece(candidate_piece):# and self.check_shape_valid(candidate_piece, near_position):
+                    if self.put_piece_to_kernel(candidate_piece, near_position):
+                        return True
                     break
+
+        self._taken_positions.pop(position)
+        self._kernel.pop(piece_id)
+        return False
 
     def check_shape_valid(self, piece_id, position):
         boundaries_pieces = {
@@ -74,6 +83,8 @@ class CrowdIndividual(object):
         return True
 
     def find_shape_available_pieces(self, piece_id, orientation):
+        if piece_id in self.shape_available_pieces:
+            return self.shape_available_pieces[piece_id]
         mine_shape_orient = get_shape_orientation(orientation)
         oppose_shape_orient =  get_shape_orientation(complementary_orientation(orientation))
         available_pieces = []
@@ -82,7 +93,7 @@ class CrowdIndividual(object):
                 continue
             if self.shapeArray[piece_id][mine_shape_orient] + self.shapeArray[i][oppose_shape_orient] == 0:
                 available_pieces.append(i)
-        np.random.shuffle(available_pieces)
+        self.shape_available_pieces[piece_id] = available_pieces
         return available_pieces
 
 
@@ -114,10 +125,13 @@ class CrowdIndividual(object):
             probability = probability_map[link_piece]
             probability_map[link_piece] = probability * (1 - choose_other_probability)
         available_pieces = self.find_shape_available_pieces(piece_id, orientation)
+        other_probability = choose_other_probability / len(available_pieces)
         for other_piece in available_pieces:
-            if not other_piece in probability_map:
-                probability_map[other_piece] = choose_other_probability / len(available_pieces)
-        
+            if other_piece in probability_map:
+                probability_map[other_piece] += other_probability
+            else:
+                probability_map[other_piece] = other_probability
+
         pop_sum = 0.0
         max_probability = 0
         max_probability_piece = -1
@@ -146,13 +160,8 @@ class CrowdIndividual(object):
             if probability_map[i] > 0:
                 none_zero_probability_map[i] = probability_map[i]
 
-        #print(none_zero_probability_map)
-
         return none_zero_probability_map
 
-    def _add_priority_piece_candidate(self, piece_id, position, priority, relative_piece):
-        piece_candidate = (priority, (position, piece_id), relative_piece)
-        heapq.heappush(self._candidate_pieces, piece_candidate)
 
     def _available_boundaries(self, row_and_column):
         (row, column) = row_and_column

@@ -18,4 +18,3 @@ edges = cog['edges_changed']
 
 #nodesAndHints = NodesAndHints(edges, rows, columns)
 ci = CrowdIndividual(rows, columns, shapeArray, edges)
-ci.printIndividual()

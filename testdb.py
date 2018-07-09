@@ -11,7 +11,7 @@ r = mongo_wrapper.round_document()
 shapeArray = mongo_wrapper.shapes_documents()
 rows = r['tilesPerRow']
 columns = r['tilesPerColumn']
-cogs = list(mongo_wrapper.cogs_documents(50000))
+cogs = list(mongo_wrapper.cogs_documents(1000000))
 cog = cogs[-1]
 edges = cog['edges_changed']
 #print(cog['correctLinks'], cog['totalLinks'])

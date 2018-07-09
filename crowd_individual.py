@@ -94,18 +94,21 @@ class CrowdIndividual(object):
         if piece_id in self.nodes:
             wp_sum = self.nodes[piece_id][orientation]['wp_sum']
             wn_sum = self.nodes[piece_id][orientation]['wn_sum']
-            for weak_link_piece in self.nodes[piece_id][orientation]['indexes']:
-                wp = self.nodes[piece_id][orientation]['indexes'][weak_link_piece]['wp']
-                probability = wp * 1.0 / self.nodes[piece_id][orientation]['wp_sum']
-                probability_map[weak_link_piece] = probability
-            strong_link_piece = self.hints[piece_id][orientation]
-            if strong_link_piece >= 0:
-                for weak_link_piece in probability_map:
-                    probability = probability_map[weak_link_piece]
-                    if weak_link_piece == strong_link_piece:
-                        probability_map[weak_link_piece] = 0.618 + (1 - 0.618) * probability
-                    else:
-                        probability_map[weak_link_piece] = (1 - 0.618) * probability
+            if wp_sum > 0:
+                for weak_link_piece in self.nodes[piece_id][orientation]['indexes']:
+                    wp = self.nodes[piece_id][orientation]['indexes'][weak_link_piece]['wp']
+                    probability = wp * 1.0 / self.nodes[piece_id][orientation]['wp_sum']
+                    probability_map[weak_link_piece] = probability
+                strong_link_piece = self.hints[piece_id][orientation]
+                if strong_link_piece >= 0:
+                    for weak_link_piece in probability_map:
+                        probability = probability_map[weak_link_piece]
+                        if weak_link_piece == strong_link_piece:
+                            probability_map[weak_link_piece] = 0.618 + (1 - 0.618) * probability
+                        else:
+                            probability_map[weak_link_piece] = (1 - 0.618) * probability
+            else:
+                choose_other_probability = 1.0
 
         for link_piece in probability_map:
             probability = probability_map[link_piece]
@@ -138,12 +141,14 @@ class CrowdIndividual(object):
                 probability_map[link_piece] = probability
             probability_map[max_probability_piece] += 1.0 - probability_sum
 
-        new_probability_map = {}
+        none_zero_probability_map = {}
         for i in probability_map:
             if probability_map[i] > 0:
-                new_probability_map[i] = probability_map[i]
+                none_zero_probability_map[i] = probability_map[i]
 
-        return new_probability_map
+        #print(none_zero_probability_map)
+
+        return none_zero_probability_map
 
     def _add_priority_piece_candidate(self, piece_id, position, priority, relative_piece):
         piece_candidate = (priority, (position, piece_id), relative_piece)
